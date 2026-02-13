@@ -1,0 +1,375 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>PDF Merger & Splitter</title>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f6f8;
+        display: flex;
+        justify-content: center;
+        padding: 40px;
+      }
+
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        width: 600px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .dropzone {
+        border: 2px dashed #888;
+        padding: 30px;
+        text-align: center;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-bottom: 20px;
+        transition: 0.2s;
+      }
+
+      .dropzone.dragover {
+        background: #e8f0ff;
+        border-color: #4a90e2;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 20px 0;
+      }
+
+      li {
+        padding: 10px;
+        margin-bottom: 8px;
+        background: #f1f1f1;
+        border-radius: 6px;
+        cursor: grab;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      button {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        background: #4a90e2;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        transition: 0.2s;
+        margin-top: 10px;
+      }
+
+      button:hover {
+        background: #357bd8;
+      }
+
+      .split-container {
+        margin-top: 15px;
+      }
+
+      .split-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        font-family: Arial, sans-serif; /* match rest of page */
+        font-size: 16px;
+        color: #333;
+      }
+
+      .split-info span,
+      .split-info label {
+        margin-right: 5px;
+      }
+
+      #splitPage {
+        width: 70px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+        font-family: inherit; /* match the rest of page */
+      }
+
+      .split-btn {
+        background: #f59c42; /* distinct color, still harmonious */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      .split-btn:hover {
+        background: #e68a2c;
+      }
+
+      .upload-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #4a90e2;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 16px;
+        transition: 0.2s;
+      }
+
+      .upload-btn:hover {
+        background: #357bd8;
+      }
+
+      .remove {
+        color: red;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>PDF Merger & Splitter</h1>
+
+      <div class="dropzone-container">
+        <div class="dropzone" id="dropzone">
+          Drag & Drop PDFs Here or Click to Upload
+        </div>
+        <input
+          type="file"
+          id="fileInput"
+          accept="application/pdf"
+          multiple
+          style="display: none"
+        />
+      </div>
+
+      <ul id="fileList"></ul>
+
+      <button onclick="mergePDFs()">Merge Bottom → Top</button>
+
+      <div class="split-container">
+        <button onclick="prepareSplit()">Select PDF to Split</button>
+
+        <div id="splitControls" style="display: none">
+          <div class="split-info">
+            <span>Total Pages: <span id="totalPages">0</span></span>
+            <label for="splitPage">Split at page:</label>
+            <input type="number" id="splitPage" min="1" />
+            <button class="split-btn" onclick="splitPDF()">Split PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const fileInput = document.getElementById("fileInput");
+
+      fileInput.addEventListener("change", (e) => {
+        const selectedFiles = Array.from(e.target.files).filter(
+          (f) => f.type === "application/pdf",
+        );
+
+        selectedFiles.forEach((file) => {
+          // Avoid duplicates
+          if (!files.some((f) => f.name === file.name)) {
+            files.push(file);
+            addFileToList(file);
+          }
+        });
+
+        // Reset input so you can select same file again if needed
+        fileInput.value = "";
+      });
+
+      const dropzone = document.getElementById("dropzone");
+      const fileList = document.getElementById("fileList");
+      let files = [];
+
+      new Sortable(fileList, {
+        animation: 150,
+      });
+
+      dropzone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+
+      dropzone.addEventListener("dragleave", () => {
+        dropzone.classList.remove("dragover");
+      });
+
+      dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("dragover");
+
+        const droppedFiles = Array.from(e.dataTransfer.files).filter(
+          (file) => file.type === "application/pdf",
+        );
+
+        droppedFiles.forEach((file) => {
+          files.push(file);
+          addFileToList(file);
+        });
+      });
+
+      dropzone.addEventListener("click", () => fileInput.click());
+
+      function addFileToList(file) {
+        const li = document.createElement("li");
+        li.textContent = file.name;
+
+        const removeBtn = document.createElement("span");
+        removeBtn.textContent = "✖";
+        removeBtn.classList.add("remove");
+
+        removeBtn.onclick = () => {
+          files = files.filter((f) => f !== file);
+          li.remove();
+
+          if (pdfToSplit === file) {
+            pdfToSplit = null;
+            document.GetElementById("splitControls").style.display = "none";
+          }
+        };
+
+        li.appendChild(removeBtn);
+        fileList.appendChild(li);
+      }
+
+      async function mergePDFs() {
+        if (fileList.children.length === 0) {
+          alert("Add some PDFs first.");
+          return;
+        }
+
+        const { PDFDocument } = PDFLib;
+        const mergedPdf = await PDFDocument.create();
+
+        // Bottom → Top merge order
+        const listItems = Array.from(fileList.children);
+
+        for (let item of listItems) {
+          const fileName = item.firstChild.textContent;
+          const file = files.find((f) => f.name === fileName);
+
+          const fileBytes = await file.arrayBuffer();
+          const pdf = await PDFDocument.load(fileBytes);
+          const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+
+          pages.forEach((page) => mergedPdf.addPage(page));
+        }
+
+        const mergedBytes = await mergedPdf.save();
+        download(mergedBytes, "merged.pdf", "application/pdf");
+      }
+
+      function download(data, filename, type) {
+        const blob = new Blob([data], { type: type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      <!-- Split Section -->
+      let pdfToSplit = null;
+      let pdfTotalPages = 0;
+
+      async function prepareSplit() {
+        if (fileList.children.length !== 1) {
+          alert("Please add exactly ONE PDF to split.");
+          return;
+        }
+
+        const fileName = fileList.children[0].firstChild.textContent;
+        pdfToSplit = files.find((f) => f.name === fileName);
+
+        const { PDFDocument } = PDFLib;
+        const fileBytes = await pdfToSplit.arrayBuffer();
+        const pdf = await PDFDocument.load(fileBytes);
+
+        pdfTotalPages = pdf.getPageCount();
+        document.getElementById("totalPages").textContent = pdfTotalPages;
+
+        // Show the split controls
+        document.getElementById("splitControls").style.display = "block";
+        document.getElementById("splitPage").max = pdfTotalPages - 1; // can't split at last page
+        document.getElementById("splitPage").value = Math.floor(
+          pdfTotalPages / 2,
+        );
+      }
+
+      async function splitPDF() {
+        if (!pdfToSplit || !files.includes(pdfToSplit)) {
+          alert("The PDF has been removed. Please select a file again.");
+          document.getElementById("splitControls").style.display = "none";
+          return;
+        }
+
+        const splitPageNum = parseInt(
+          document.getElementById("splitPage").value,
+        );
+        if (
+          !splitPageNum ||
+          splitPageNum < 1 ||
+          splitPageNum >= pdfTotalPages
+        ) {
+          alert("Enter a valid page number to split.");
+          return;
+        }
+
+        const { PDFDocument } = PDFLib;
+        const fileBytes = await pdfToSplit.arrayBuffer();
+        const originalPdf = await PDFDocument.load(fileBytes);
+
+        // Part 1
+        const pdfPart1 = await PDFDocument.create();
+        const pages1 = await pdfPart1.copyPages(
+          originalPdf,
+          Array.from({ length: splitPageNum }, (_, i) => i),
+        );
+        pages1.forEach((p) => pdfPart1.addPage(p));
+
+        // Part 2
+        const pdfPart2 = await PDFDocument.create();
+        const pages2 = await pdfPart2.copyPages(
+          originalPdf,
+          Array.from(
+            { length: pdfTotalPages - splitPageNum },
+            (_, i) => i + splitPageNum,
+          ),
+        );
+        pages2.forEach((p) => pdfPart2.addPage(p));
+
+        const bytes1 = await pdfPart1.save();
+        const bytes2 = await pdfPart2.save();
+
+        const baseName = pdfToSplit.name.replace(".pdf", "");
+        download(bytes1, baseName + "_part1.pdf", "application/pdf");
+        download(bytes2, baseName + "_part2.pdf", "application/pdf");
+
+        // Reset
+        pdfToSplit = null;
+        document.getElementById("splitControls").style.display = "none";
+      }
+    </script>
+  </body>
+</html>
