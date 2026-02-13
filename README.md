@@ -3,7 +3,7 @@
 A lightweight, browser-based PDF utility that allows users to merge and split PDF files directly in their browser — with no uploads, no paywalls, and no file size limits beyond browser memory.
 
 🔗 **Live Demo:**  
-https://patzerzach.github.io
+https://patzerzach.github.io/PDF-Merger-Splitter
 
 ---
 
