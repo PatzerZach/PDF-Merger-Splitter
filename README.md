@@ -59,7 +59,7 @@ cd PDF-Merger-Splitter
 
 ### Option 2: Download as ZIP
 
-1. Click the green **Code** button on the repository page.
+1. Click the green **Code** button on the repository page or select the latest release ZIP [here](https://github.com/PatzerZach/PDF-Merger-Splitter/releases/tag/v1.0.0).
 2. Select **Download ZIP**.
 3. Extract the downloaded file.
 4. Open the extracted `PDF_Merger-Splitter` folder.
